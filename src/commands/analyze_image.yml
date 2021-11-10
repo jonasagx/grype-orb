@@ -1,0 +1,21 @@
+description: |
+  Add image to grype and start analyzing.
+  image_name is required, timeout is optional.
+
+parameters:
+  image_name:
+    description: Image repository & tag (eg - "docker.io/anchore/grype:latest").
+    type: string
+  output_format:
+    description: report output formatter, formats=[json table cyclonedx template]
+    type: string
+    default: 'json'
+
+steps:
+  - run:
+      name: Analyze image with anchore engine.
+      command: |
+        IMAGE_NAME="<< parameters.image_name >>"
+        OUTPUT_FORMAT=<<parameters.output_format>>
+        docker exec -e IMAGE_NAME="$IMAGE_NAME" -e OUTPUT_FORMAT="$OUTPUT_FORMAT" -it grype bash -lc 'grype "$IMAGE_NAME" -o "$OUTPUT_FORMAT"'
+        docker cp grype:/grype/reports/ ./

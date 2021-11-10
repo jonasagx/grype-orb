@@ -1,0 +1,48 @@
+description: |
+  Pushes a local image to a temporary registry container.
+  Image is then scanned with grype. Stores all reports as artifacts.
+  Must be run in job with setup_remote_docker & using an image with docker installed.
+
+parameters:
+  grype_version:
+    description: Version of grype image.
+    type: string
+    default: latest
+  dockerfile_path:
+    description: Path to dockerfile used to build image
+    type: string
+    default: ''
+  image_name:
+    description: Image repository & tag (eg - "docker.io/anchore/grype:latest").
+    type: string
+
+steps:
+  - run:
+      name: Scan local image.
+      command: |
+        if [[ ! $(which bash) ]]; then
+          (set +o pipefail; apk add bash || apt-get install -y bash || yum install -y bash)
+        fi
+        if [[ ! $(which curl) ]]; then
+          (set +o pipefail; apk add curl || apt-get install -y curl || yum install -y curl)
+        fi
+        GRYPE_VERSION="<< parameters.grype_version >>"
+        DOCKERFILE_PATH="<< parameters.dockerfile_path >>"
+        IMAGE_NAME="<< parameters.image_name >>"
+        run_cmd="curl -s https://ci-tools.anchore.io/inline_scan-${ANCHORE_VERSION} | bash -s -- -r -t $TIMEOUT"
+        if $POLICY_FAILURE; then
+          run_cmd="$run_cmd -f"
+        fi
+        if [[ ! -z $POLICY_BUNDLE_PATH ]] && [[ -f $POLICY_BUNDLE_PATH ]]; then
+          run_cmd="$run_cmd -b $POLICY_BUNDLE_PATH"
+        else
+          echo "ERROR - could not find policy bundle $POLICY_BUNDLE_PATH - using default policy bundle."
+        fi
+        if [[ ! -z $DOCKERFILE_PATH ]] && [[ -f $DOCKERFILE_PATH ]]; then
+          run_cmd="$run_cmd -d $DOCKERFILE_PATH"
+        else
+          echo "ERROR - could not find Dockerfile $DOCKERFILE_PATH - Dockerfile not included in scan."
+        fi
+        run_cmd="$run_cmd $IMAGE_NAME"
+        docker pull docker.io/anchore/inline-scan:${ANCHORE_VERSION}
+        eval "$run_cmd"
