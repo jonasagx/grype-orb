@@ -1,0 +1,62 @@
+description: |
+  Performs a static security analysis of docker container with grype.
+  Grype pulls image from public/private docker registries. Requires
+  registry credentials to access private images,
+  use ENV vars $GRYPE_REGISTRY_AUTH_USERNAME and $GRYPE_REGISTRY_AUTH_PASSWORD
+
+executor: anchore_engine
+
+parameters:
+  after_checkout:
+    description: Optional steps to run after checking out the code.
+    type: steps
+    default: []
+  before_analyze:
+    description: Optional steps to run before analyzing the docker image.
+    type: steps
+    default: []
+  after_analyze:
+    description: Optional steps to run after analyzing the docker image.
+    type: steps
+    default: []
+  image_name:
+    description: Image repository & tag (eg - docker.io/anchore/anchore-engine:latest).
+    type: string
+  registry_name:
+    description: Name of private registry (eg - docker.io)
+    type: string
+    default: docker.io
+  registry_user:
+    description: Username for private registry (use env var $GRYPE_REGISTRY_AUTH_USERNAME to populate).
+    type: string
+    default: $GRYPE_REGISTRY_AUTH_USERNAME
+  registry_pass:
+    description: Password for private registry (use env var $GRYPE_REGISTRY_AUTH_PASSWORD to populate).
+    type: string
+    default: $GRYPE_REGISTRY_AUTH_PASSWORD
+
+steps:
+  - setup_remote_docker:
+      docker_layer_caching: true
+  - checkout
+  - when:
+      name: Run after_checkout life cycle hook steps.
+      condition: << parameters.after_checkout >>
+      steps: << parameters.after_checkout >>
+  - start_engine
+  - when:
+      name: Run before_analyze life cycle hook steps.
+      condition: << parameters.before_analyze >>
+      steps: << parameters.before_analyze >>
+  - analyze_image:
+      registry_name: << parameters.registry_name >>
+      registry_user: << parameters.registry_user >>
+      registry_pass: << parameters.registry_pass >>
+      image_name: << parameters.image_name >>
+  - when:
+      name: Run after_analyze life cycle hook steps.
+      condition: << parameters.after_analyze >>
+      steps: << parameters.after_analyze >>
+  - parse_reports
+  - store_artifacts:
+      path: grype-reports

@@ -1,0 +1,17 @@
+description: |
+  Use this job to scan an image located in a private registry.
+
+usage:
+  version: 2.1
+  orbs:
+    anchore: anchore/anchore-engine@1
+
+  workflows:
+    scan_image:
+      jobs:
+        - anchore/image_scan:
+            image_name: docker.io/anchore/grype:latest
+            private_registry: True
+            registry_name: docker.io
+            registry_user: $DOCKER_USER
+            registry_pass: $DOCKER_PASS

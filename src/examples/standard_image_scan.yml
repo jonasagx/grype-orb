@@ -1,0 +1,13 @@
+description: |
+  Use this job to scan an image located in a public registry.
+
+usage:
+  version: 2.1
+  orbs:
+    anchore: anchore/anchore-engine@1
+
+  workflows:
+    scan_image:
+      jobs:
+        - anchore/image_scan:
+            image_name: docker.io/anchore/grype:latest
